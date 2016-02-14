@@ -78,7 +78,8 @@ var Qts =
                 var el = $(this);
                 
                 // actual ajax call to visit profile
-                $.get('http://www.interpals.net/'+$(this).attr('href')).done(function() 
+                // @todo change to relative calls
+                $.get('https://www.interpals.net/'+$(this).attr('href')).done(function() 
                 {
                     doneCount++;
                     $('#qtpopupcontent').html('visited : '+doneCount+'/ '+qtCounter);
