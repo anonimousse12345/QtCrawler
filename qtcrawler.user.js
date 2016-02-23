@@ -26,16 +26,76 @@ var Qts =
             localStorage.setItem("qts", JSON.stringify({}));
         }
         
-        // init user interface
-        $('form[name="onlineForm"').append( '<div class="filterLinks"> <h1 style="margin: 5px 0 5px 25px; float: left;"> \
-            Automatize: </h1> <a href="#" id="autoView">view all profiles</a> </div>');
+        //
+        // Create Popup
+        //
         
-        $('body').append('<div id="qtpopup" style="display: none; height: 100px; z-index: 99999;background-color: #ccc; \
-                            position: fixed; top: 100px; width: 300px; left: 50%; margin-left: -150px;">\
-                            <h1>Qt Crawler</h1> <div id="qtpopupinfo">currently visiting qts...</div>\
-                            <span id="qtpopupcontent"></span>\
-                            </div>');
+        var popup = document.createElement('div');
+        $(popup).css({
+            'display'           : 'none',
+            'height'            : '100px',
+            'width'             : '300px',
+            'position'          : 'fixed',
+            'left'              : '50%',
+            'margin-left'       : '-150px',
+            'z-index'           : '99999',
+            'background-color'  : '#ccc'
+        });
+        $(popup).attr('id', 'qtpopup');
         
+        //
+        // Create Popup Content
+        //
+        
+        // Headline
+        var popupHeadline = document.createElement('h1');
+        $(popupHeadline).html('Titel');
+        
+        // Popup info
+        var popupInfo = document.createElement('div');
+        $(popupInfo).attr('id', 'qtpopupinfo');
+        $(popupInfo).html('currently visiting qts... ');
+        
+        // Pointer
+        var popupContent = document.createElement('span');
+        $(popupContent).attr('id', 'qtpopupcontent');
+        
+        // Add content to Popup
+        $(popup).append(popupHeadline);
+        $(popup).append(popupInfo);
+        $(popup).append(popupContent);
+        
+        // Add Popup to Body
+        $('body').append(popup);
+        
+        //
+        // Create User Interface
+        //
+        
+        // Create container
+        var fLinkAuto = document.createElement('div');
+        $(fLinkAuto).addClass('filterLinks');
+        
+        // Create headline for container
+        var fLinkHeadline = document.createElement('h1');
+        $(fLinkHeadline).css({
+            'margin'    : '5px 0 5px 25px',
+            'float'     : 'left'
+        });
+        
+        // Create link "view all"
+        var fLinkViewAll = document.createElement('a');
+        $(fLinkViewAll).attr('href', '#');
+        $(fLinkViewAll).attr('id', 'autoView');
+        $(fLinkViewAll).html('view all');
+        
+        // Append link to box
+        $(fLinkAuto).append(fLinkHeadline);
+        $(fLinkAuto).append(fLinkViewAll);
+        
+        // Add box to headmenu
+        $('form[name="onlineForm"').append(fLinkAuto);
+
         // set UI listener
         Qts.refreshListener();
     },
