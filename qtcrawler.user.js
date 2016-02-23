@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Qt visitor
-// @namespace    http://your.homepage/
-// @version      0.1
-// @description  I did it for the azn girls tbh
+// @name         QtCrawler
+// @namespace    com.yellowfever.qtcrawler
+// @version      0.2
+// @description  Taiwan is not a part of China
 // @author       (You)
 // @match        http://www.interpals.net/online.php
 // @include      http*://interpals.net/online.php
@@ -20,11 +20,43 @@ var Qts =
 {
     init: function() 
     {
-        // init local storage
-        if(localStorage.getItem("qts") === null) 
-        {
-            localStorage.setItem("qts", JSON.stringify({}));
-        }
+        var that = this;
+        
+        // Building interface and setting listener to activate the bot functionality
+        that.buildInterface();
+        that.refreshListener();
+    },
+    
+    /**
+     * Deletes all listener and re-sets them
+     */
+    refreshListener: function()
+    {
+        var that = this; 
+        
+        $('#autoView').off('click');
+        $('#autoView').on('click', function(ev) {
+            ev.preventDefault();
+            that.runBot();
+            ev.stopPropagation();
+        });
+        
+        $('#clearqtlist').off('click');
+        $('#clearqtlist').on('click',function(ev) {
+            ev.preventDefault();
+            QtRegistry.resetQts();
+            $('#clearqtlist').replaceWith('<strong>Visited QTs resetted</strong>');
+            ev.stopPropagation();
+        });
+    },
+    
+    /**
+     * Builds the interface (Popup) for the QtCrawler and adds a link
+     * to the top menu to "view all profiles"
+     */
+    buildInterface: function()
+    {
+        var that = this;
         
         //
         // Create Popup
@@ -33,13 +65,15 @@ var Qts =
         var popup = document.createElement('div');
         $(popup).css({
             'display'           : 'none',
-            'height'            : '100px',
-            'width'             : '300px',
+            'height'            : '130px',
+            'width'             : '330px',
             'position'          : 'fixed',
             'left'              : '50%',
             'margin-left'       : '-150px',
             'z-index'           : '99999',
-            'background-color'  : '#ccc'
+            'background-color'  : '#ccc',
+            'top'               : '10px',
+            'padding'           : '5px'
         });
         $(popup).attr('id', 'qtpopup');
         
@@ -49,7 +83,7 @@ var Qts =
         
         // Headline
         var popupHeadline = document.createElement('h1');
-        $(popupHeadline).html('Titel');
+        $(popupHeadline).html('QtCrawler');
         
         // Popup info
         var popupInfo = document.createElement('div');
@@ -78,6 +112,7 @@ var Qts =
         
         // Create headline for container
         var fLinkHeadline = document.createElement('h1');
+        $(fLinkHeadline).html('Automatize:');
         $(fLinkHeadline).css({
             'margin'    : '5px 0 5px 25px',
             'float'     : 'left'
@@ -95,25 +130,14 @@ var Qts =
         
         // Add box to headmenu
         $('form[name="onlineForm"').append(fLinkAuto);
-
-        // set UI listener
-        Qts.refreshListener();
-    },
-    
-    refreshListener: function()
-    {
-        $('#autoView').off('click');
-        $('#autoView').on('click', function(ev) {
-            ev.preventDefault();
-            Qts.runBot();
-            ev.stopPropagation();
-        });
     },
     
     runBot: function()
     {
+        var that = this;
+        
         // get visited qts from localStorage
-        var visitedQts = Qts._getVisited();
+        var visitedQts = QtRegistry.getQts();
         var qtCounter = 0;
         var qtTotal = $('.online_prof a.female').length;
         var doneCount = 0;
@@ -129,41 +153,50 @@ var Qts =
 
                 if(typeof visitedQts[userName] !== typeof undefined) 
                 {
-                    
                     return;
                 }
-                qtCounter ++;
+                
+                qtCounter++;
                 visitedQts[userName] = true;
                 
                 var el = $(this);
                 
                 // actual ajax call to visit profile
-                // @todo change to relative calls
-                $.get('https://www.interpals.net/'+$(this).attr('href')).done(function() 
+                $.get('//www.interpals.net/'+$(this).attr('href')).done(function() 
                 {
                     doneCount++;
                     $('#qtpopupcontent').html('visited : '+doneCount+'/ '+qtCounter);
                     // paint profile black for visited qt
                     el.parent().parent().parent().css({'background-color': '#000'});
+                    
                     if(doneCount === qtCounter)
                     {
-                        $('#qtpopupinfo').html("finished visiting qts");
+                        var popupText = '';
+                        
+                        popupText  = 'Finished visiting QTs <br />';
+                        
+                        // if the difference between displayed qts and visited qts is not 0, 
+                        // the qt registry had an entry.
+                        //
+                        // in this case, the user might want to reset his Qt List
+                        if((qtTotal - qtCounter) !== 0)
+                        {
+                            popupText += '<br />';
+                            popupText += 'A total of '+(qtTotal - qtCounter)+' QTs have been skipped ';
+                            popupText += 'because you already visited them before. <br />';
+                            popupText += '<a href="#" id="clearqtlist">Clear visited QT List</a> ';
+                            popupText += '(click requires no further confirmation)';
+                        }
+                        
+                        $('#qtpopupinfo').html(popupText);
+                        // Refresh listener to activate clear-list button
+                        that.refreshListener();
                     }
                 });
             }
         });
         
-        Qts._setVisited(visitedQts);
-    },
-    
-    _getVisited: function()
-    {
-        return JSON.parse(localStorage.getItem("qts"));
-    },
-    
-    _setVisited: function(qtList)
-    {
-        localStorage.setItem("qts", JSON.stringify(qtList));
+        QtRegistry.setQts(visitedQts);
     }
 };
 
@@ -171,3 +204,51 @@ $(document).ready(function()
 {
     Qts.init(); // run bot tbh
 });
+
+/**
+ * The QT Registry saves all previously visited profiles into the localStroage.
+ * Since QtCrawler runs only in relatively new Chrome and Firefox versions
+ * through *monkey, it's presumed that the client supports localStorage.
+ */
+var QtRegistry = 
+{
+    /**
+     * returns the list of visited QTs
+     * @returns {Array|Object}
+     */
+    getQts: function()
+    {
+        var that = this;
+        
+        that._init();
+        return JSON.parse(localStorage.getItem("qts"));
+    },
+    
+    /**
+     * set the new visited QT list
+     * @param {Array|Object} qtList the new list of visited qts
+     */
+    setQts: function(qtList)
+    {
+        localStorage.setItem("qts", JSON.stringify(qtList));
+    },
+    
+    /**
+     * reset the list of visited QTs
+     */
+    resetQts: function()
+    {
+        localStorage.setItem("qts", JSON.stringify({}));
+    },
+    
+    /**
+     * initialize localStorage variable
+     */
+    _init: function()
+    {
+        if(localStorage.getItem("qts") === null) 
+        {
+            localStorage.setItem("qts", JSON.stringify({}));
+        }
+    }
+};
