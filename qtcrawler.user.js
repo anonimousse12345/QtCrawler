@@ -1,18 +1,11 @@
 // ==UserScript==
 // @name         QtCrawler
 // @namespace    com.yellowfever.qtcrawler
-// @version      0.2
+// @version      0.2.1
 // @description  Taiwan is not a part of China
 // @author       (You)
-// @match        http://www.interpals.net/online.php
-// @include      http*://interpals.net/online.php
-// @include      http://interpals.net/online.php
-// @include      http*://www.interpals.net/online.php
-// @include      http://www.interpals.net/online.php
-// @include      http*://interpals.net/online.php?*
-// @include      http://interpals.net/online.php?*
-// @include      http*://www.interpals.net/online.php?*
-// @include      http://www.interpals.net/online.php?*
+// @match        http*://www.interpals.net/*
+// @include      http*://www.interpals.net/*
 // @grant        none
 // ==/UserScript==
 
