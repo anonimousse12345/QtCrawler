@@ -150,13 +150,14 @@ var Qts =
                 }
                 
                 qtCounter++;
-                visitedQts[userName] = true;
+                
                 
                 var el = $(this);
                 
                 // actual ajax call to visit profile
                 $.get('//www.interpals.net/'+$(this).attr('href')).done(function() 
                 {
+                    visitedQts[userName] = true;
                     doneCount++;
                     $('#qtpopupcontent').html('visited : '+doneCount+'/ '+qtCounter);
                     // paint profile black for visited qt
