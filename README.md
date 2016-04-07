@@ -16,5 +16,8 @@ Beta version for testing. Currently only tested in Chrome.
 
 ## known issues
 
-1. stops working after chrome has no resources left when opening >3000 profiles at once on my dev system
-2. crawlerlink shows up after the page has been loaded, so it might take a few extra seconds
+As of the 06. April. 2016, interpals seem to have started to throttle high amounts of requests. I have been told by several users, that the script stops working after a little less than 500 profiles at the moment. Everything coming after those profiles won't be called anymore and results in a server error "500".
+
+Version 0.2.2 implements a quick-fix, which will register a profile as visited only if no error occurs. So, you can manually restart the script everytime it stops working. 
+
+I'm working to find a solution
