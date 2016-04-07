@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QtCrawler
 // @namespace    com.yellowfever.qtcrawler
-// @version      0.2.1
+// @version      0.2.2
 // @description  Taiwan is not a part of China
 // @author       (You)
 // @match        http*://www.interpals.net/*
