@@ -1,18 +1,11 @@
 // ==UserScript==
 // @name         QtCrawler
 // @namespace    com.yellowfever.qtcrawler
-// @version      0.2
+// @version      0.3-beta1
 // @description  Taiwan is not a part of China
 // @author       (You)
-// @match        http://www.interpals.net/online.php
-// @include      http*://interpals.net/online.php
-// @include      http://interpals.net/online.php
-// @include      http*://www.interpals.net/online.php
-// @include      http://www.interpals.net/online.php
-// @include      http*://interpals.net/online.php?*
-// @include      http://interpals.net/online.php?*
-// @include      http*://www.interpals.net/online.php?*
-// @include      http://www.interpals.net/online.php?*
+// @match        http*://www.interpals.net/*
+// @include      http*://www.interpals.net/*
 // @grant        none
 // ==/UserScript==
 
@@ -128,7 +121,7 @@ var Qts =
        
         $('#messagepopup').append(popupTextbox);
         $('#messagepopup').append('<br />Placeholder: <br />');
-        $('#messagepopup').append('{username}, {realname}, {city}, {country} <br />');
+        $('#messagepopup').append('{username}, {city}, {country} <br />');
         
         var messageLink = document.createElement('a');
         $(messageLink).attr('href', '#');
@@ -226,7 +219,7 @@ var Qts =
                     doneCount++;
                     $('.qtpopupcontent').html('visited : '+doneCount+'/ '+qtCounter);
                     // paint profile black for visited qt
-                    el.parent().parent().parent().css({'background-color': '#000'});
+                    el.parent().parent().parent().css({'background-color': '#f00'});
                     
                     if(doneCount === qtCounter)
                     {
@@ -278,7 +271,6 @@ var Qts =
                 var user = $(this).attr('href').replace('/','');
                 
                 qtCounter++;
-//                visitedQts[userName] = true;
                 
                 var el = $(this);
                 
@@ -294,35 +286,40 @@ var Qts =
                         $(thread).html(response);
                         if(header.getResponseHeader("TM-finalURLdhdg") !== null)
                         {
-                            var threadUrl = header.getResponseHeader("TM-finalURLdhdg");
-                            var chunks = threadUrl.split('thread_id=');
-                            if(chunks.length === 2)
+                            if($(thread).find(".msg_user").length > 0) 
                             {
-                                var thradId = chunks[1];
-                                var sMessage = $('#messagetext').val();
-                                sMessage = sMessage.replace("{username}", user);
-                                sMessage = sMessage.replace("{city}", pmCity);
-                                sMessage = sMessage.replace("{country}", pmCountry);
-
-                                $.ajax({type:"POST",url:"pm.php",data:{action:"send_message",thread:thradId,message: sMessage},dataType:"json"}).done(function() {
-                                    el.parent().parent().parent().css({'background-color': '#000'});
-                                });
+                                el.parent().parent().parent().css({'background-color': '#0f0'});
                             }
                             else
                             {
-                                console.log(user+' does not want to be contacted')
+                                var threadUrl = header.getResponseHeader("TM-finalURLdhdg");
+                                var chunks = threadUrl.split('thread_id=');
+                                if(chunks.length === 2)
+                                {
+                                    var thradId = chunks[1];
+                                    var sMessage = $('#messagetext').val();
+                                    sMessage = sMessage.replace("{username}", user);
+                                    sMessage = sMessage.replace("{city}", pmCity);
+                                    sMessage = sMessage.replace("{country}", pmCountry);
+
+                                    $.ajax({type:"POST",url:"pm.php",data:{action:"send_message",thread:thradId,message: sMessage},dataType:"json"}).done(function() {
+                                        el.parent().parent().parent().css({'background-color': '#000'});
+                                    });
+                                }
+                                else
+                                {
+                                    el.parent().parent().parent().css({'background-color': '#f00'});
+                                }
                             }
                         }
                         else
                         {
-                            console.log("user does not want to be contacted");
+                            el.parent().parent().parent().css({'background-color': '#f00'});
                         }
                     });
                 });
             }
         });
-        
-        QtRegistry.setQts(visitedQts);
     }
 };
 
@@ -366,7 +363,7 @@ var QtRegistry =
     {
         localStorage.setItem("qts", JSON.stringify({}));
     },
-    
+        
     /**
      * initialize localStorage variable
      */
@@ -375,6 +372,10 @@ var QtRegistry =
         if(localStorage.getItem("qts") === null) 
         {
             localStorage.setItem("qts", JSON.stringify({}));
+        }
+        if(localStorage.getItem("messagedQts") === null) 
+        {
+            localStorage.setItem("messagedQts", JSON.stringify({}));
         }
     }
 };
