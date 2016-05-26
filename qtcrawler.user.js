@@ -4,7 +4,8 @@
 // @version      0.3
 // @description  Taiwan is not a part of China
 // @author       (You)
-// @match        http*://www.interpals.net/*
+// @match        http://www.interpals.net/*
+// @match        https://www.interpals.net/*
 // @include      http*://www.interpals.net/*
 // @grant        none
 // ==/UserScript==
