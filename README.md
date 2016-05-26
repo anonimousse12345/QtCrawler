@@ -14,3 +14,8 @@ Beta version for testing. Currently only tested in Chrome.
 5. scroll down and click on "View all on one page"
 6. click on "view all profiles"
 
+
+## New
+
+Added functionality to send message to all users. Just click "message all". It won't message users you've already talked to.
+
