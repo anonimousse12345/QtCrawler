@@ -262,8 +262,6 @@ Qt.Messenger = function ()  {
     }
 
     that.runBot = function() {
-        that.buildInterface();
-
         var visitedQts = Qt.Registry.get();
         var unfilteredTotal = $('.online_prof a.female').length;
         var doneVisited = 0;
