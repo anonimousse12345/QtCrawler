@@ -1,108 +1,337 @@
 // ==UserScript==
 // @name         QtCrawler
 // @namespace    com.yellowfever.qtcrawler
-// @version      0.2.2
+// @version      0.3
 // @description  Taiwan is not a part of China
 // @author       (You)
 // @match        http*://www.interpals.net/*
 // @include      http*://www.interpals.net/*
 // @grant        none
 // ==/UserScript==
+var Qt = function() {
+    var intf = new Qt.Interface();
+    intf.run();
+};
 
-var Qts = 
-{
-    init: function() 
-    {
-        var that = this;
-        
-        // Building interface and setting listener to activate the bot functionality
-        that.buildInterface();
-        that.refreshListener();
+Qt.Popup = function(content, closebutton) {
+    var that = this;
+
+    // credits: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+    that.guid = function() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                .toString(16)
+                .substring(1);
+        }
+
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+            s4() + '-' + s4() + s4() + s4();
+    };
+
+    that.id = that.guid();
+
+    that.css = {
+        'display'           : 'none',
+        'height'            : '130px',
+        'width'             : '330px',
+        'position'          : 'fixed',
+        'left'              : '50%',
+        'margin-left'       : '-150px',
+        'z-index'           : '99999',
+        'background-color'  : '#ccc',
+        'top'               : '10px',
+        'padding'           : '5px'
+    };
+
+    that.closeButton = closebutton || false;
+    that.content = content || "";
+
+    that.buildTemplate = function() {
+        var popupOutter = document.createElement('div');
+
+        $(popupOutter).css(that.css);
+        $(popupOutter).attr('id', that.id);
+        $(popupOutter).addClass('qt-popup');
+
+        var popupHeader = document.createElement('div');
+        $(popupHeader).addClass('qt-header');
+
+        if(that.closeButton) {
+            var closeButton = document.createElement('a');
+            $(closeButton).addClass('qt-close');
+            $(closeButton).attr('qt-remove', that.id);
+            $(closeButton).html('[X]');
+            $(closeButton).attr('href', 'javascript:void(0)');
+            $(popupHeader).append(closeButton);
+        }
+
+        $(popupOutter).append(popupHeader);
+        return popupOutter;
+    }
+
+    that.show = function() {
+        var popupHtml = that.buildTemplate();
+        var popupBody = document.createElement('div');
+
+
+
+        $(popupBody).addClass('qt-body');
+
+        if(typeof that.content != typeof "") {
+            that.content = that.content.outerHTML;
+        }
+
+        console.log("content: "+that.content);
+
+        $(popupBody).html(that.content);
+        $(popupHtml).append(popupBody);
+
+        $('body').append(popupHtml);
+        $('#'+that.id).show();
+
+        Qt.Popup.refreshListener();
+    }
+
+    that.getSelector = function() {
+        return $('#'+that.id);
+    }
+};
+
+Qt.Popup.refreshListener = function() {
+    $('.qt-close').off('click');
+    $('.qt-close').on('click', function() {
+        Qt.Popup.remove($(this).attr('qt-remove'));
+    });
+}
+
+Qt.Popup.remove = function (popupId) {
+    $('#'+popupId).remove();
+};
+
+Qt.Registry = {
+    get : function() {
+        this._init();
+        return JSON.parse(localStorage.getItem("qts"));
     },
-    
-    /**
-     * Deletes all listener and re-sets them
-     */
-    refreshListener: function()
-    {
-        var that = this; 
-        
-        $('#autoView').off('click');
-        $('#autoView').on('click', function(ev) {
-            ev.preventDefault();
-            that.runBot();
-            ev.stopPropagation();
-        });
-        
-        $('#clearqtlist').off('click');
-        $('#clearqtlist').on('click',function(ev) {
-            ev.preventDefault();
-            QtRegistry.resetQts();
-            $('#clearqtlist').replaceWith('<strong>Visited QTs resetted</strong>');
-            ev.stopPropagation();
-        });
+
+    set: function(qtList) {
+        localStorage.setItem("qts", JSON.stringify(qtList));
     },
-    
-    /**
-     * Builds the interface (Popup) for the QtCrawler and adds a link
-     * to the top menu to "view all profiles"
-     */
-    buildInterface: function()
-    {
-        var that = this;
-        
-        //
-        // Create Popup
-        //
-        
-        var popup = document.createElement('div');
-        $(popup).css({
-            'display'           : 'none',
-            'height'            : '130px',
-            'width'             : '330px',
-            'position'          : 'fixed',
-            'left'              : '50%',
-            'margin-left'       : '-150px',
-            'z-index'           : '99999',
-            'background-color'  : '#ccc',
-            'top'               : '10px',
-            'padding'           : '5px'
-        });
-        $(popup).attr('id', 'qtpopup');
-        
-        //
-        // Create Popup Content
-        //
-        
+
+    reset: function() {
+        localStorage.setItem("qts", JSON.stringify({}));
+    },
+
+    _init: function() {
+        if(localStorage.getItem("qts") === null) {
+            Qt.Registry.reset();
+        }
+    }
+};
+
+Qt.OnlineVisitor = function() {
+    var that = this;
+
+    that.popup = null;
+
+    that.buildInterface = function() {
         // Headline
         var popupHeadline = document.createElement('h1');
         $(popupHeadline).html('QtCrawler');
-        
+
         // Popup info
         var popupInfo = document.createElement('div');
         $(popupInfo).attr('id', 'qtpopupinfo');
         $(popupInfo).html('currently visiting qts... ');
-        
+
         // Pointer
         var popupContent = document.createElement('span');
         $(popupContent).attr('id', 'qtpopupcontent');
+
+        var pp = document.createElement('div');
+        $(pp).append(popupHeadline);
+        $(pp).append(popupInfo);
+        $(pp).append(popupContent);
+
+        that.popup = new Qt.Popup(pp, true);
+    };
+
+    that.runBot = function() {
+        that.buildInterface();
+
+        var visitedQts = Qt.Registry.get();
+        var unfilteredTotal = $('.online_prof a.female').length;
+        var doneVisited = 0;
+        var currentCounter = 0;
+
+        that.popup.show();
         
-        // Add content to Popup
-        $(popup).append(popupHeadline);
-        $(popup).append(popupInfo);
-        $(popup).append(popupContent);
-        
-        // Add Popup to Body
-        $('body').append(popup);
-        
-        //
-        // Create User Interface
-        //
-        
+        $('.online_prof a.female').each(function() {
+            if($(this).attr('href').indexOf('country') === -1) {
+                var userName = $(this).attr('href').replace('/','');
+
+                if(typeof visitedQts[userName] !== typeof undefined) {
+                    return;
+                }
+
+                currentCounter++;
+
+                var el = $(this);
+
+                $.get('//www.interpals.net/'+$(this).attr('href')).done(function() {
+                    visitedQts[userName] = true;
+                    doneVisited ++;
+                    el.parent().parent().parent().css({'background-color': '#000'});
+
+                    var percentDone = doneVisited / currentCounter * 100;
+                    $('#qtpopupinfo').html('visiting: '+doneVisited+' of '+currentCounter);
+                    $('#qtpopupcontent').html("<div style='width: "+percentDone+"%; background: #000; text-align: center; color: red'>&nbsp;</div>");
+
+                    // finished
+                    if(doneVisited === currentCounter) {
+                        Qt.Registry.set(visitedQts);
+
+                        var popupText = 'Finished visiting Qts ('+doneVisited+')';
+
+                        if(unfilteredTotal - doneVisited !== 0) {
+                            popupText += '<br />';
+                            popupText += 'A total of '+(unfilteredTotal - currentCounter)+' QTs have been skipped ';
+                            popupText += 'because you already visited them before. <br />';
+                            popupText += '<a href="#" id="clearqtlist">Clear visited QT List</a> ';
+                            popupText += '(click requires no further confirmation)';
+                        }
+
+                        $('#qtpopupinfo').html(popupText);
+                        that.refreshListener();
+                    }
+                });
+            }
+        });
+    };
+
+    that.refreshListener = function() {
+        $('#clearqtlist').off('click');
+        $('#clearqtlist').on('click',function(ev) {
+            ev.preventDefault();
+            Qt.Registry.reset();
+            $('#clearqtlist').replaceWith('<strong>Visited QTs resetted</strong>');
+            ev.stopPropagation();
+        });
+    }
+
+    that.runBot();
+};
+
+Qt.Messenger = function ()  {
+    var that = this;
+
+    that.popup = null;
+
+    that.buildInterface = function() {
+        // Headline
+        var popupHeadline = document.createElement('h1');
+        $(popupHeadline).html('QtCrawler');
+
+        // Popup info
+        var popupInfo = document.createElement('div');
+        $(popupInfo).attr('id', 'messagepopup');
+        $(popupInfo).html('Type in your message. Use {username}, {city} and {country} as placeholders. <br />');
+
+        // Pointer
+        var popupContent = document.createElement('span');
+        $(popupContent).attr('id', 'messagepopupcontent');
+
+        $(popupContent).html('<textarea style="width: 310px; height: 40px" id="messagetext"></textarea>')
+        $(popupContent).append('<br /><a href="#" id="sendMessages">Message all</a>')
+        var pp = document.createElement('div');
+        $(pp).append(popupHeadline);
+        $(pp).append(popupInfo);
+        $(pp).append(popupContent);
+
+        that.popup = new Qt.Popup(pp, true);
+    };
+
+    that.showPopup = function() {
+        that.buildInterface();
+        that.popup.show();
+        $('#sendMessages').off('click');
+        $('#sendMessages').on('click', function() {
+            that.runBot();
+        });
+    }
+
+    that.runBot = function() {
+        that.buildInterface();
+
+        var visitedQts = Qt.Registry.get();
+        var unfilteredTotal = $('.online_prof a.female').length;
+        var doneVisited = 0;
+        var currentCounter = 0;
+
+        that.popup.show();
+
+        $('.online_prof a.female').each(function() {
+            if($(this).attr('href').indexOf('country') === -1) {
+                var userName = $(this).attr('href').replace('/','');
+
+                var el = $(this);
+
+                $.ajax('/'+userName).done(function(html) {
+
+                    // COLLECT DATA
+                    var visitedSite = document.createElement('div');
+                    $(visitedSite).html(html);
+                    var pmLink = $(visitedSite).find('#prof-action-links a').first().attr('href');
+                    var pmCity = $(visitedSite).find('.profDataTopData div a').first().text().trim();
+                    var pmCountry = $(visitedSite).find('.profDataTopData div a').first().next().text().trim();
+
+                    // Call PM link
+
+                    $.get('//www.interpals.net/'+pmLink).done(function(response, _, header) {
+                        // found thread
+                        var thread = document.createElement('div');
+                        $(thread).html(response);
+
+                        if(header.getResponseHeader("TM-finalURLdhdg") !== null) {
+                            if($(thread).find(".msg_user").length > 0) {
+                                // user does not like being contacted
+                                el.parent().parent().parent().css({'background-color': '#0f0'});
+                            } else {
+                                var threadUrl = header.getResponseHeader("TM-finalURLdhdg");
+                                var chunks = threadUrl.split('thread_id=');
+
+                                if(chunks.length === 2) {
+                                    var thradId = chunks[1];
+                                    var sMessage = $('#messagetext').val();
+                                    sMessage = sMessage.replace("{username}", userName);
+                                    sMessage = sMessage.replace("{city}", pmCity);
+                                    sMessage = sMessage.replace("{country}", pmCountry);
+
+                                    $.ajax({type:"POST",url:"https://www.interpals.net/pm.php",data:{action:"send_message",thread:thradId,message: sMessage},dataType:"json"}).done(function() {
+                                        el.parent().parent().parent().css({'background-color': '#000'});
+                                    });
+                                } else {
+                                    el.parent().parent().parent().css({'background-color': '#f00'});
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+    };
+
+    that.showPopup();
+}
+
+Qt.Interface = function() {
+    var that = this;
+
+    that.build = function() {
         // Create container
         var fLinkAuto = document.createElement('div');
         $(fLinkAuto).addClass('filterLinks');
-        
+
         // Create headline for container
         var fLinkHeadline = document.createElement('h1');
         $(fLinkHeadline).html('Automatize:');
@@ -110,139 +339,43 @@ var Qts =
             'margin'    : '5px 0 5px 25px',
             'float'     : 'left'
         });
-        
+
         // Create link "view all"
         var fLinkViewAll = document.createElement('a');
         $(fLinkViewAll).attr('href', '#');
         $(fLinkViewAll).attr('id', 'autoView');
         $(fLinkViewAll).html('view all');
-        
+
+        // Create link "view all"
+        var fLinkMessage = document.createElement('a');
+        $(fLinkMessage).attr('href', '#');
+        $(fLinkMessage).attr('id', 'autoMessage');
+        $(fLinkMessage).html('message all');
+
         // Append link to box
         $(fLinkAuto).append(fLinkHeadline);
         $(fLinkAuto).append(fLinkViewAll);
-        
+        $(fLinkAuto).append(fLinkMessage);
+
         // Add box to headmenu
-        $('form[name="onlineForm"').append(fLinkAuto);
-    },
-    
-    runBot: function()
-    {
-        var that = this;
-        
-        // get visited qts from localStorage
-        var visitedQts = QtRegistry.getQts();
-        var qtCounter = 0;
-        var qtTotal = $('.online_prof a.female').length;
-        var doneCount = 0;
-        
-        // iterate through profiles
-        $('#qtpopup').show();
-        $('#qtpopupinfo').html("running");
-        $('.online_prof a.female').each(function() 
-        {
-            if($(this).attr('href').indexOf('country') === -1)
-            {
-                var userName = $(this).attr('href').replace('/','');
+        $('form[name="onlineForm"]').append(fLinkAuto);
+    };
 
-                if(typeof visitedQts[userName] !== typeof undefined) 
-                {
-                    return;
-                }
-                
-                qtCounter++;
-                
-                
-                var el = $(this);
-                
-                // actual ajax call to visit profile
-                $.get('//www.interpals.net/'+$(this).attr('href')).done(function() 
-                {
-                    visitedQts[userName] = true;
-                    doneCount++;
-                    $('#qtpopupcontent').html('visited : '+doneCount+'/ '+qtCounter);
-                    // paint profile black for visited qt
-                    el.parent().parent().parent().css({'background-color': '#000'});
-                    
-                    if(doneCount === qtCounter)
-                    {
-                        var popupText = '';
-                        
-                        popupText  = 'Finished visiting QTs <br />';
-                        
-                        // if the difference between displayed qts and visited qts is not 0, 
-                        // the qt registry had an entry.
-                        //
-                        // in this case, the user might want to reset his Qt List
-                        if((qtTotal - qtCounter) !== 0)
-                        {
-                            popupText += '<br />';
-                            popupText += 'A total of '+(qtTotal - qtCounter)+' QTs have been skipped ';
-                            popupText += 'because you already visited them before. <br />';
-                            popupText += '<a href="#" id="clearqtlist">Clear visited QT List</a> ';
-                            popupText += '(click requires no further confirmation)';
-                        }
-                        
-                        $('#qtpopupinfo').html(popupText);
-                        // Refresh listener to activate clear-list button
-                        that.refreshListener();
-                    }
-                });
-            }
+    that.run = function() {
+        that.build();
+
+        $('#autoView').off('click');
+        $('#autoView').on('click', function () {
+            new Qt.OnlineVisitor();
         });
-        
-        QtRegistry.setQts(visitedQts);
+
+        $('#autoMessage').off('click');
+        $('#autoMessage').on('click', function () {
+            new Qt.Messenger();
+        });
     }
 };
 
-$(document).ready(function() 
-{
-    Qts.init(); // run bot tbh
-});
-
-/**
- * The QT Registry saves all previously visited profiles into the localStroage.
- * Since QtCrawler runs only in relatively new Chrome and Firefox versions
- * through *monkey, it's presumed that the client supports localStorage.
- */
-var QtRegistry = 
-{
-    /**
-     * returns the list of visited QTs
-     * @returns {Array|Object}
-     */
-    getQts: function()
-    {
-        var that = this;
-        
-        that._init();
-        return JSON.parse(localStorage.getItem("qts"));
-    },
-    
-    /**
-     * set the new visited QT list
-     * @param {Array|Object} qtList the new list of visited qts
-     */
-    setQts: function(qtList)
-    {
-        localStorage.setItem("qts", JSON.stringify(qtList));
-    },
-    
-    /**
-     * reset the list of visited QTs
-     */
-    resetQts: function()
-    {
-        localStorage.setItem("qts", JSON.stringify({}));
-    },
-    
-    /**
-     * initialize localStorage variable
-     */
-    _init: function()
-    {
-        if(localStorage.getItem("qts") === null) 
-        {
-            localStorage.setItem("qts", JSON.stringify({}));
-        }
-    }
-};
+$(document).ready(function() {
+    new Qt();
+})
