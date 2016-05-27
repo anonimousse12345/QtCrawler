@@ -10,8 +10,13 @@
 // @grant        none
 // ==/UserScript==
 var Qt = function() {
-    var intf = new Qt.Interface();
-    intf.run();
+    if (window.location.hash == '#qtcontinue') {
+        new Qt.OnlineVisitor();
+    }
+    else {
+        var intf = new Qt.Interface();
+        intf.run();
+    }
 };
 
 Qt.Popup = function(content, closebutton) {
@@ -130,6 +135,39 @@ Qt.Registry = {
     }
 };
 
+Qt.EnumeratorOnlinePage = {
+    count : function() {
+        return $('.online_prof a.female').length;
+    },
+    enumerate : function(callback) {
+        $('.online_prof a.female').each(function() {
+            if($(this).attr('href').indexOf('country') === -1) {
+                callback( $(this).attr('href').replace('/',''), $(this) );
+            }
+        });
+    }
+};
+
+Qt.EnumeratorSearchPage = {
+    count : function() {
+        return $('.sResThumb').length;
+    },
+    enumerate : function(callback) {
+        $('.sResThumb').each(function() {
+            callback( $(this).attr('href').split('?')[0].replace('/','') , $(this) );
+        });
+    }
+};
+
+Qt.MaybeHeadToNextPage = function() {
+    var href = $('.cur_page').next().attr('href');
+    
+    if (href) {
+        var url = 'https://www.interpals.net' + href + '#qtcontinue'
+        window.location.href = url;
+    }
+};
+
 Qt.OnlineVisitor = function() {
     var that = this;
 
@@ -160,54 +198,61 @@ Qt.OnlineVisitor = function() {
     that.runBot = function() {
         that.buildInterface();
 
+        // choose correct enumerator
+        var qtEnumerator = Qt.EnumeratorOnlinePage.count() > Qt.EnumeratorSearchPage.count() ?
+            Qt.EnumeratorOnlinePage : Qt.EnumeratorSearchPage;
+
         var visitedQts = Qt.Registry.get();
-        var unfilteredTotal = $('.online_prof a.female').length;
+        var unfilteredTotal = qtEnumerator.count();
         var doneVisited = 0;
         var currentCounter = 0;
 
         that.popup.show();
         
-        $('.online_prof a.female').each(function() {
-            if($(this).attr('href').indexOf('country') === -1) {
-                var userName = $(this).attr('href').replace('/','');
-
-                if(typeof visitedQts[userName] !== typeof undefined) {
-                    return;
-                }
-
-                currentCounter++;
-
-                var el = $(this);
-
-                $.get('//www.interpals.net/'+$(this).attr('href')).done(function() {
-                    visitedQts[userName] = true;
-                    doneVisited ++;
-                    el.parent().parent().parent().css({'background-color': '#000'});
-
-                    var percentDone = doneVisited / currentCounter * 100;
-                    $('#qtpopupinfo').html('visiting: '+doneVisited+' of '+currentCounter);
-                    $('#qtpopupcontent').html("<div style='width: "+percentDone+"%; background: #000; text-align: center; color: red'>&nbsp;</div>");
-
-                    // finished
-                    if(doneVisited === currentCounter) {
-                        Qt.Registry.set(visitedQts);
-
-                        var popupText = 'Finished visiting Qts ('+doneVisited+')';
-
-                        if(unfilteredTotal - doneVisited !== 0) {
-                            popupText += '<br />';
-                            popupText += 'A total of '+(unfilteredTotal - currentCounter)+' QTs have been skipped ';
-                            popupText += 'because you already visited them before. <br />';
-                            popupText += '<a href="#" id="clearqtlist">Clear visited QT List</a> ';
-                            popupText += '(click requires no further confirmation)';
-                        }
-
-                        $('#qtpopupinfo').html(popupText);
-                        that.refreshListener();
-                    }
-                });
+        qtEnumerator.enumerate(function(userName, element) {
+        
+            if(typeof visitedQts[userName] !== typeof undefined) {
+                return;
             }
+
+            currentCounter++;
+
+            $.get('//www.interpals.net/'+userName).done(function() {
+                visitedQts[userName] = true;
+                doneVisited ++;
+                element.parent().parent().parent().css({'background-color': '#000'});
+
+                var percentDone = doneVisited / currentCounter * 100;
+                $('#qtpopupinfo').html('visiting: '+doneVisited+' of '+currentCounter);
+                $('#qtpopupcontent').html("<div style='width: "+percentDone+"%; background: #000; text-align: center; color: red'>&nbsp;</div>");
+
+                // finished
+                if(doneVisited === currentCounter) {
+                    Qt.Registry.set(visitedQts);
+
+                    var popupText = 'Finished visiting Qts ('+doneVisited+')';
+
+                    if(unfilteredTotal - doneVisited !== 0) {
+                        popupText += '<br />';
+                        popupText += 'A total of '+(unfilteredTotal - currentCounter)+' QTs have been skipped ';
+                        popupText += 'because you already visited them before. <br />';
+                        popupText += '<a href="#" id="clearqtlist">Clear visited QT List</a> ';
+                        popupText += '(click requires no further confirmation)';
+                    }
+                    
+                    // If on search page
+                    Qt.MaybeHeadToNextPage();
+
+                    $('#qtpopupinfo').html(popupText);
+                    that.refreshListener();
+                }
+            });
         });
+        
+        // all were already visited, head to next search page
+        if (currentCounter == 0) {
+            Qt.MaybeHeadToNextPage();
+        }
     };
 
     that.refreshListener = function() {
@@ -333,7 +378,7 @@ Qt.Interface = function() {
 
         // Create headline for container
         var fLinkHeadline = document.createElement('h1');
-        $(fLinkHeadline).html('Automatize:');
+        $(fLinkHeadline).html('Auto:');
         $(fLinkHeadline).css({
             'margin'    : '5px 0 5px 25px',
             'float'     : 'left'
@@ -358,6 +403,9 @@ Qt.Interface = function() {
 
         // Add box to headmenu
         $('form[name="onlineForm"]').append(fLinkAuto);
+        
+        // Add to search box on search page
+        $('form[name="sCForm"]').append(fLinkAuto);
     };
 
     that.run = function() {
